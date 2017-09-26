@@ -9,7 +9,7 @@ MAC =span/AR
 S = span*MAC
 Sref = S
 sweep_d = 5.0
-fuselagewidth = .15
+fuselagewidth = 0 #0.15
 tc = .1
 l = .75
 S_xc = fuselagewidth^2
@@ -25,12 +25,13 @@ CDi_a = zeros(CL_a)
 CDiv_a = zeros(CL_a)
 Re = zeros(CL_a)
 q = zeros(CL_a)
+oswald = zeros(CL_a)
 for i = 1:N
     CL,q[i] = lift_coefficient(weight,Sref,Vinf[i],1.2)
     CDp,Re[i] = wingparasitic(S,Sref,Vinf[i],sweep_d,MAC,tc,1.2,500000)
     CDpb = bluntbodydrag(Vinf[i],S_xc,Sref,l,1.2,500000)
     CDi = liftinduced(CL,einv,AR,fuselagewidth,span)
-    CDiv = viscousliftinduced(CDp,CL)
+    CDiv,oswald[i] = viscousliftinduced(CDp,CL, 0.38, einv,  AR)
 
     CDp_a[i] = CDp
     CDpb_a[i] = CDpb
@@ -45,6 +46,24 @@ LoD = CL_a./CD
 LoDwing = CL_a./CDwing
 LoDmax,LoDidxMax = findmax(LoD)
 LoDwingmax,LoDwingidxMax = findmax(LoDwing)
+idx2 = 0
+oswald_av = (oswald[LoDwingidxMax+idx2])
+CDp_av = (CDp_a[LoDwingidxMax+idx2])
+maxLoDanalytical = sqrt.(CDp_av*pi*AR.*oswald_av)-CL_a
+LoDanalytical = CL_a.*pi.*oswald_av*AR./(CL_a.^2+CDp_av.*pi.*oswald_av*AR)
+LoDanalmax,LoDanalidxMax = findmax(LoDanalytical)
+tol = 1e-3
+i=0
+for i = 1:length(maxLoDanalytical)
+    if maxLoDanalytical[i]>0-tol && maxLoDanalytical[i]<0+tol
+        break
+    end
+end
+PyPlot.figure()
+PyPlot.plot(Vinf,maxLoDanalytical,"k-",label = "Total CD")
+PyPlot.xlabel("Vinf")
+PyPlot.ylabel("sqrt(CDp_a*pi*AR.*oswald)-CL_a")
+PyPlot.legend()
 
 PyPlot.figure()
 PyPlot.plot(Vinf,CD,"k-",label = "Total CD")
@@ -91,6 +110,24 @@ PyPlot.plot(Vinf,LoDwing,"b-", label = "Wing Only")
 PyPlot.plot(Vinf[LoDwingidxMax],LoDwingmax,"bx",label = "Max L/D: $(round(LoDwingmax,2)) at $(round(Vinf[LoDwingidxMax],2)) m/s
 Re = $(round(Re[LoDwingidxMax],-3))
 CL = $(round(CL_a[LoDwingidxMax],1))")
+PyPlot.xlabel("Vinf")
+PyPlot.ylabel("L/D")
+PyPlot.legend(loc = 4,ncol = 2)
+
+PyPlot.figure()
+# PyPlot.plot(Vinf,LoD,"k-",label = "Fuselage Included")
+# PyPlot.plot(Vinf[LoDidxMax],LoDmax,"kx",label = "Max L/D: $(round(LoDmax,2)) at $(round(Vinf[LoDidxMax],2)) m/s
+# Re = $(round(Re[LoDidxMax],-3))
+# CL = $(round(CL_a[LoDidxMax],1))")
+PyPlot.plot(Vinf,LoDwing,"b-", label = "Wing Only")
+PyPlot.plot(Vinf[LoDwingidxMax],LoDwingmax,"bx",label = "Max L/D: $(round(LoDwingmax,2)) at $(round(Vinf[LoDwingidxMax],2)) m/s
+Re = $(round(Re[LoDwingidxMax],-3))
+CL = $(round(CL_a[LoDwingidxMax],2))")
+PyPlot.plot(Vinf,LoDanalytical,"r-", label = "Analytical Wing Only L/D")
+LoDanalmax,LoDanalidxMax
+PyPlot.plot(Vinf[i],LoDanalytical[i],"rx", label = "Analytical Max L/D: $(round(LoDanalmax,2)) at $(round(Vinf[i],2)) m/s
+Re = $(round(Re[i],-3))
+CL = $(round(CL_a[i],2))")
 PyPlot.xlabel("Vinf")
 PyPlot.ylabel("L/D")
 PyPlot.legend(loc = 4,ncol = 2)

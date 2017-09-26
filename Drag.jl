@@ -101,11 +101,13 @@ function liftinduced(CL,e,AR,fuselagewidth=0,span=1)
     return CDi
 end
 
-function viscousliftinduced(CDp,CL,K = 0.38)
+function viscousliftinduced(CDp,CL,K = 0.38, einv=0.98, AR = 10)
     # Viscous induced
     CDiv = K*CDp*CL^2
-    return CDiv
+    oswald = 1/(1/einv+K*CDp*pi*AR)
+    return CDiv, oswald
 end
+
 
 
 # #Test
